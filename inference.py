@@ -189,15 +189,8 @@ def run_task(task_id: str, seed: int = 42, max_retries: int = 3) -> dict:
     
     # [START] log
     start_time = time.time()
-    task_start_json = {
-        "type": "[START]",
-        "task_id": task_id,
-        "seed": seed,
-        "model": MODEL_NAME,
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    }
-    print(json.dumps(task_start_json))
-    sys.stdout.flush()
+    # Validator requires the literal [START] at the line beginning
+    print(f"[START] task={task_id} seed={seed} model={MODEL_NAME}", flush=True)
     
     # Reset environment
     try:
@@ -205,17 +198,7 @@ def run_task(task_id: str, seed: int = 42, max_retries: int = 3) -> dict:
     except Exception as e:
         print(f"  Failed to reset environment: {e}", file=sys.stderr)
         # Emit [END] immediately on reset failure
-        print(json.dumps({
-            "type": "[END]",
-            "task_id": task_id,
-            "score": 0.0,
-            "total_reward": 0.0,
-            "steps": 0,
-            "error": f"Reset failed: {str(e)}",
-            "model": MODEL_NAME,
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        }))
-        sys.stdout.flush()
+        print(f"[END] task={task_id} score=0.0 total_reward=0.0 steps=0 error={str(e).replace(' ', '_')}", flush=True)
         return {"type": "[END]", "task_id": task_id, "score": 0.0}
         
     messages = [
@@ -263,17 +246,8 @@ def run_task(task_id: str, seed: int = 42, max_retries: int = 3) -> dict:
         quality_score = obs_data.get("metadata", {}).get("quality_score", 0.0)
         
         # [STEP] log
-        print(json.dumps({
-            "type": "[STEP]",
-            "task_id": task_id,
-            "step": step_count,
-            "action": action_dict.get("action_type", "unknown"),
-            "reward": reward,
-            "quality_score": quality_score,
-            "done": done,
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        }))
-        sys.stdout.flush()
+        # Validator requires the literal [STEP] at the line beginning
+        print(f"[STEP] task={task_id} step={step_count} action={action_dict.get('action_type', 'unknown')} reward={reward} score={quality_score} done={done}", flush=True)
         
         if done:
             final_score = quality_score
@@ -286,20 +260,16 @@ def run_task(task_id: str, seed: int = 42, max_retries: int = 3) -> dict:
     elapsed = time.time() - start_time
     
     # [END] log
-    result = {
-        "type": "[END]",
-        "task_id": task_id,
+    # Validator requires the literal [END] at the line beginning
+    print(f"[END] task={task_id} score={final_score} total_reward={total_reward} steps={step_count}", flush=True)
+    
+    return {
+        "type": "[END]", 
+        "task_id": task_id, 
         "score": final_score,
         "total_reward": total_reward,
-        "steps": step_count,
-        "elapsed_seconds": round(elapsed, 2),
-        "model": MODEL_NAME,
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "steps": step_count
     }
-    print(json.dumps(result))
-    sys.stdout.flush()
-    
-    return result
 
 
 # =============================================================================
