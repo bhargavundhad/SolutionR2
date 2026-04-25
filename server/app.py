@@ -19,7 +19,7 @@ from typing import Any, Dict, Optional
 from openenv.core.env_server.http_server import HTTPEnvServer
 from openenv.core.env_server.types import HealthResponse, HealthStatus
 
-from environment_v2 import CollaborativeDataOpsEnvironment
+from server.environment_v2 import CollaborativeDataOpsEnvironment
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import DataCleaningAction, DataCleaningObservation, DataCleaningState
