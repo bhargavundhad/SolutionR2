@@ -72,6 +72,22 @@ def _serialize_observation(obs: DataCleaningObservation) -> dict:
     }
 
 
+@app.get("/")
+async def root():
+    return {
+        "name": "Collaborative DataOps Crisis Environment",
+        "status": "online",
+        "docs": "/docs",
+        "health": "/health",
+        "endpoints": [
+            "/reset",
+            "/step",
+            "/state",
+            "/schema",
+            "/metadata"
+        ]
+    }
+
 @app.get("/health")
 async def health():
     """Health check endpoint."""
