@@ -13,7 +13,7 @@ from typing import Dict, List
 
 import requests
 
-from inference import choose_heuristic_action
+from ..inference import choose_heuristic_action
 
 
 ENV_URL = os.environ.get("ENV_URL", "http://localhost:7860")
