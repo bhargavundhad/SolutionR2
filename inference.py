@@ -29,6 +29,7 @@ from openai import OpenAI
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-mini")
 API_KEY = os.environ.get("HF_TOKEN") or os.environ.get("OPENAI_API_KEY", "dummy-key-for-init")
+POLICY_MODE = os.environ.get("POLICY_MODE", "heuristic").lower()
 ENV_URL = os.environ.get("ENV_URL")
 if not ENV_URL:
     # Try to auto-discover if running on Hugging Face or known space
@@ -42,10 +43,7 @@ if not ENV_URL:
         ENV_URL = "https://hinex-07-data-cleaning-env.hf.space"
 
 # Initialize OpenAI client
-client = OpenAI(
-    api_key=API_KEY,
-    base_url=API_BASE_URL,
-)
+client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
 
 # =============================================================================
 # Environment interaction helpers
@@ -86,27 +84,63 @@ def env_state() -> dict:
 # LLM Agent
 # =============================================================================
 
-SYSTEM_PROMPT = """You are an expert data cleaning agent. You are given a messy dataset and must clean it by performing a series of actions.
+SYSTEM_PROMPT = """You are an expert data cleaning agent. Your goal is to maximize the quality score of a messy dataset by choosing the most impactful cleaning action at each step.
+
+STRATEGY — always follow this priority order:
+1. FIRST: Always remove duplicates if duplicate_row_count > 0
+2. SECOND: Fix missing values — use strategy "drop" for email/id columns, "mean" for numeric columns, "mode" for categorical columns
+3. THIRD: Convert columns with wrong types — if salary or numeric column is stored as string, use convert_type with target_type "float" and strip_chars "$,"
+4. FOURTH: Standardize formats — dates to iso_date, phones to phone_standard, text to lowercase or titlecase
+5. FIFTH: Fix typos in categorical columns using correct_typos with a mapping dict
+6. SIXTH: Fix outliers in numeric columns if min/max values look extreme
+7. LAST: Call submit only when no detected issues remain OR when you have fewer than 3 steps left
+
+RULES:
+- Never repeat an action that already succeeded on the same column
+- Never call submit if duplicate_row_count > 0 or if there are obvious missing values remaining
+- Always read the detected_issues list carefully — it tells you exactly what is wrong
+- If last_action_success is False, try a different action or different column
 
 Available action types:
-1. "remove_duplicates" - Remove duplicate rows. Optionally specify a "column" for subset-based dedup.
-2. "fill_missing" - Fill missing values. Requires "column". Params: "strategy" (drop/fill_value/mean/mode), "fill_value" (if strategy=fill_value)
-3. "standardize_format" - Standardize column format. Requires "column". Params: "format" (iso_date/phone_standard/lowercase/uppercase/titlecase/strip_whitespace)
-4. "fix_outliers" - Fix statistical outliers. Requires "column". Params: "strategy" (clip/remove), "lower_bound", "upper_bound"
-5. "rename_column" - Rename a column. Requires "column". Params: "new_name"
-6. "drop_column" - Drop an irrelevant column. Requires "column".
-7. "correct_typos" - Fix typos in categorical column. Requires "column". Params: "mapping" (dict of old_value -> new_value)
-8. "convert_type" - Convert column data type. Requires "column". Params: "target_type" (float/int/str), "strip_chars" (chars to remove before conversion, e.g. "$,")
-9. "submit" - Submit the cleaned dataset for final grading. Use when you're confident the data is clean.
+1. "remove_duplicates" - params: {} (no params needed)
+2. "fill_missing" - requires column. params: strategy (drop/mean/mode/fill_value), fill_value if strategy=fill_value
+3. "standardize_format" - requires column. params: format (iso_date/phone_standard/lowercase/titlecase/strip_whitespace)
+4. "fix_outliers" - requires column. params: strategy (clip/remove), lower_bound, upper_bound
+5. "rename_column" - requires column. params: new_name
+6. "drop_column" - requires column. No params needed
+7. "correct_typos" - requires column. params: mapping (dict of wrong_value to correct_value)
+8. "convert_type" - requires column. params: target_type (float/int/str), strip_chars (e.g. "$,")
+9. "submit" - no column, no params. Use when data is clean.
 
-You MUST respond with a valid JSON action object. Example:
+Respond ONLY with a valid JSON object. No explanation. No markdown. Just the JSON.
+Examples:
 {"action_type": "remove_duplicates", "column": null, "params": {}}
-{"action_type": "fill_missing", "column": "email", "params": {"strategy": "drop"}}
-{"action_type": "correct_typos", "column": "status", "params": {"mapping": {"Compelted": "completed", "COMPLETED": "completed"}}}
+{"action_type": "fill_missing", "column": "salary", "params": {"strategy": "mean"}}
+{"action_type": "convert_type", "column": "salary", "params": {"target_type": "float", "strip_chars": "$,"}}
 {"action_type": "submit", "column": null, "params": {}}
-
-Respond ONLY with the JSON object, no other text. Analyze the observation carefully and choose the most impactful action.
 """
+
+# SYSTEM_PROMPT = """You are an expert data cleaning agent. You are given a messy dataset and must clean it by performing a series of actions.
+
+# Available action types:
+# 1. "remove_duplicates" - Remove duplicate rows. Optionally specify a "column" for subset-based dedup.
+# 2. "fill_missing" - Fill missing values. Requires "column". Params: "strategy" (drop/fill_value/mean/mode), "fill_value" (if strategy=fill_value)
+# 3. "standardize_format" - Standardize column format. Requires "column". Params: "format" (iso_date/phone_standard/lowercase/uppercase/titlecase/strip_whitespace)
+# 4. "fix_outliers" - Fix statistical outliers. Requires "column". Params: "strategy" (clip/remove), "lower_bound", "upper_bound"
+# 5. "rename_column" - Rename a column. Requires "column". Params: "new_name"
+# 6. "drop_column" - Drop an irrelevant column. Requires "column".
+# 7. "correct_typos" - Fix typos in categorical column. Requires "column". Params: "mapping" (dict of old_value -> new_value)
+# 8. "convert_type" - Convert column data type. Requires "column". Params: "target_type" (float/int/str), "strip_chars" (chars to remove before conversion, e.g. "$,")
+# 9. "submit" - Submit the cleaned dataset for final grading. Use when you're confident the data is clean.
+
+# You MUST respond with a valid JSON action object. Example:
+# {"action_type": "remove_duplicates", "column": null, "params": {}}
+# {"action_type": "fill_missing", "column": "email", "params": {"strategy": "drop"}}
+# {"action_type": "correct_typos", "column": "status", "params": {"mapping": {"Compelted": "completed", "COMPLETED": "completed"}}}
+# {"action_type": "submit", "column": null, "params": {}}
+
+# Respond ONLY with the JSON object, no other text. Analyze the observation carefully and choose the most impactful action.
+# """
 
 
 def parse_action(response_text: str) -> dict:
@@ -181,7 +215,107 @@ def format_observation_for_llm(obs: dict) -> str:
         for i, row in enumerate(sample):
             lines.append(f"  Row {i}: {json.dumps(row, default=str)}")
     
-    return "\n".join(lines)
+    obs_text = "\n".join(lines)
+    # --- Token limit logic ---
+    # Estimate tokens: 1 token ≈ 4 chars (conservative for English)
+    max_tokens = 4000  # keep well below 6000 for safety
+    est_tokens = len(obs_text) // 4
+    if est_tokens > max_tokens:
+        # Truncate sample data first
+        # Find where sample data starts
+        sample_start = None
+        for idx, line in enumerate(lines):
+            if line.startswith("=== Sample Data"):
+                sample_start = idx
+                break
+        if sample_start is not None:
+            # Keep only first 2 sample rows
+            lines = lines[:sample_start+1+2]  # header + 2 rows
+            obs_text = "\n".join(lines)
+            est_tokens = len(obs_text) // 4
+        # If still too large, truncate detected issues
+        if est_tokens > max_tokens:
+            issues_start = None
+            for idx, line in enumerate(lines):
+                if line.startswith("=== Detected Issues"):
+                    issues_start = idx
+                    break
+            if issues_start is not None:
+                # Keep only header
+                lines = lines[:issues_start+1]
+                obs_text = "\n".join(lines)
+                est_tokens = len(obs_text) // 4
+        # If still too large, truncate everything after column info
+        if est_tokens > max_tokens:
+            colinfo_end = None
+            for idx, line in enumerate(lines):
+                if line.startswith("=== Missing Values") or line.startswith("=== Numeric Column Stats") or line.startswith("=== Detected Issues") or line.startswith("=== Sample Data"):
+                    colinfo_end = idx
+                    break
+            if colinfo_end is not None:
+                lines = lines[:colinfo_end]
+                obs_text = "\n".join(lines)
+    return obs_text
+
+
+def choose_heuristic_action(obs: dict) -> dict:
+    """Policy tuned for the collaborative DataOps environment."""
+    o = obs.get("observation", obs)
+    step = o.get("current_step", 0)
+    max_steps = o.get("max_steps", 20)
+    visible = o.get("visible_incidents", [])
+    stakeholder_status = o.get("stakeholder_status", {})
+    hints = o.get("hidden_risks_hint", [])
+    breakdown = o.get("mission_score_breakdown", {})
+    table_health = o.get("table_health", {})
+
+    if step == 0:
+        return {
+            "action_type": "propose_plan",
+            "column": None,
+            "params": {"milestones": ["triage", "stabilize", "optimize", "release"]},
+        }
+
+    unknown_stakeholder = next((k for k, v in stakeholder_status.items() if not v.get("known_priority", False)), None)
+    if unknown_stakeholder:
+        return {"action_type": "query_stakeholder", "column": None, "params": {"stakeholder": unknown_stakeholder}}
+
+    if any("hidden" in h.lower() or "latent" in h.lower() for h in hints):
+        return {"action_type": "run_validation_suite", "column": None, "params": {"suite": "compliance"}}
+
+    critical_visible = [i for i in visible if i.get("severity") == "critical"]
+    if critical_visible:
+        return {"action_type": "delegate_task", "column": None, "params": {"stakeholder": "compliance_officer", "objective": "critical_closeout"}}
+
+    if visible:
+        target = visible[0]
+        category = target.get("category", "")
+        table = target.get("table")
+        if category == "duplicates":
+            return {"action_type": "remove_duplicates", "column": table, "params": {}}
+        if category in {"missingness", "timeliness"}:
+            return {"action_type": "fill_missing", "column": table, "params": {"strategy": "mode"}}
+        if category in {"format", "type", "typos"}:
+            return {"action_type": "standardize_format", "column": table, "params": {"format": "strip_whitespace"}}
+        if category in {"outlier", "drift"}:
+            return {"action_type": "fix_outliers", "column": table, "params": {"strategy": "clip"}}
+        return {"action_type": "delegate_task", "column": None, "params": {"stakeholder": "data_engineer", "objective": "incident_fix"}}
+
+    low_table = None
+    low_val = 2.0
+    for table, metrics in table_health.items():
+        score = metrics.get("completeness", 0) + metrics.get("consistency", 0) + metrics.get("timeliness", 0)
+        if score < low_val:
+            low_val = score
+            low_table = table
+    if low_table:
+        return {"action_type": "inspect_table", "column": low_table, "params": {}}
+
+    mission_score = breakdown.get("mission_score", 0.0)
+    if step < max_steps - 3 and mission_score < 0.78:
+        return {"action_type": "negotiate_tradeoff", "column": None, "params": {"stakeholder": "ops_lead" if "ops_lead" in stakeholder_status else "product_manager", "concession": "status_update"}}
+
+    return {"action_type": "submit", "column": None, "params": {}}
 
 
 def run_task(task_id: str, seed: int = 42, max_retries: int = 3) -> dict:
@@ -201,9 +335,7 @@ def run_task(task_id: str, seed: int = 42, max_retries: int = 3) -> dict:
         print(f"[END] task={task_id} score=0.0 total_reward=0.0 steps=0 error={str(e).replace(' ', '_')}", flush=True)
         return {"type": "[END]", "task_id": task_id, "score": 0.0}
         
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-    ]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     
     total_reward = 0.0
     step_count = 0
@@ -215,29 +347,32 @@ def run_task(task_id: str, seed: int = 42, max_retries: int = 3) -> dict:
         obs_text = format_observation_for_llm(obs)
         messages.append({"role": "user", "content": obs_text})
         
-        # Get LLM response
-        action_dict = None
-        for attempt in range(max_retries):
-            try:
-                response = client.chat.completions.create(
-                    model=MODEL_NAME,
-                    messages=messages,
-                    temperature=0.1,
-                    max_tokens=500,
-                )
-                response_text = response.choices[0].message.content.strip()
-                action_dict = parse_action(response_text)
-                messages.append({"role": "assistant", "content": response_text})
-                break
-            except Exception as e:
-                print(f"  LLM call failed (attempt {attempt+1}/{max_retries}): {e}", file=sys.stderr)
-                if attempt == max_retries - 1:
-                    # Fall back to submit
-                    action_dict = {"action_type": "submit", "column": None, "params": {}}
+        if POLICY_MODE == "heuristic":
+            action_dict = choose_heuristic_action(obs)
+        else:
+            action_dict = None
+            for attempt in range(max_retries):
+                try:
+                    response = client.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=messages,
+                        temperature=0.1,
+                        max_tokens=500,
+                    )
+                    response_text = response.choices[0].message.content.strip()
+                    action_dict = parse_action(response_text)
+                    messages.append({"role": "assistant", "content": response_text})
+                    break
+                except Exception as e:
+                    print(f"  LLM call failed (attempt {attempt+1}/{max_retries}): {e}", file=sys.stderr)
+                    if attempt == max_retries - 1:
+                        action_dict = choose_heuristic_action(obs)
         
         # Execute action
         step_count += 1
         obs = env_step(action_dict)
+        if POLICY_MODE != "heuristic":
+            time.sleep(1)
         
         obs_data = obs.get("observation", obs)
         reward = obs.get("reward", 0.0)
@@ -282,6 +417,7 @@ def main():
     print("  Data Cleaning Environment - Baseline Inference", file=sys.stderr)
     print("=" * 60, file=sys.stderr)
     print(f"  Model:    {MODEL_NAME}", file=sys.stderr)
+    print(f"  Policy:   {POLICY_MODE}", file=sys.stderr)
     print(f"  API URL:  {API_BASE_URL}", file=sys.stderr)
     print(f"  Env URL:  {ENV_URL}", file=sys.stderr)
     print("=" * 60, file=sys.stderr)

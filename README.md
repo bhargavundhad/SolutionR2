@@ -1,221 +1,155 @@
 ---
-title: Data Cleaning Env
-emoji: 👀
-colorFrom: blue
-colorTo: indigo
+title: Collaborative DataOps Crisis Env
+emoji: 🧭
+colorFrom: purple
+colorTo: blue
 sdk: docker
 app_port: 7860
 ---
 
-#  Data Cleaning Environment
+# Collaborative DataOps Crisis Environment
 
-> An OpenEnv-compliant RL environment where AI agents learn to clean messy tabular datasets  a skill data engineers spend **80% of their time** on in the real world.
+OpenEnv environment for training LLM agents on realistic **multi-agent, long-horizon incident response** in enterprise data platforms.
 
-[![OpenEnv](https://img.shields.io/badge/OpenEnv-compatible-blue)](https://github.com/meta-pytorch/OpenEnv)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org)
-[![License: BSD-3](https://img.shields.io/badge/License-BSD%203--Clause-yellow.svg)](https://opensource.org/licenses/BSD-3-Clause)
+## Why This Is Hackathon-Strong
 
----
+- **Environment innovation first:** not a toy cleaning loop; this is a socio-technical war-room simulation.
+- **Hybrid themes:** multi-agent interaction + long-horizon planning + professional world modeling.
+- **Judge-friendly storytelling:** hidden risks, stakeholder conflict, and phase-based mission progression.
+- **Measurable reward gains:** built-in evaluation compares random vs strategy-aware policies.
 
-##  Motivation
+## Core Concept
 
-Data cleaning is **the most time-consuming part** of any data pipeline. According to industry surveys, data professionals spend 60-80% of their time finding and fixing data quality issues. This environment simulates that real-world task, providing a structured training ground for AI agents to learn data cleaning skills.
+The agent is a mission lead during a high-stakes DataOps outage. It must:
+- discover hidden incidents under partial observability,
+- align multiple stakeholders with conflicting priorities,
+- orchestrate cleaning/validation/delegation actions over many steps,
+- submit only after critical and compliance risks are under control.
 
-Unlike toy environments, this one models genuine data quality issues that professionals encounter daily:
-- Duplicate records from ETL pipeline failures
-- Missing values from incomplete data ingestion
-- Format inconsistencies across data sources
-- Statistical outliers from sensor errors or data entry mistakes
-- Schema drift from evolving data sources
-- Typos and encoding issues in categorical data
+## Theme Coverage
 
----
+- **Theme 1 - Multi-Agent Interactions:** stakeholder trust/workload/priority dynamics.
+- **Theme 2 - Long-Horizon Planning:** mission phases (`triage -> stabilize -> optimize -> release`) and delayed penalties.
+- **Theme 3 - World Modeling / Professional Tasks:** enterprise incidents, compliance pressure, SLA-risk tradeoffs.
+- **Theme 4 - Self-Improvement (optional):** memory updates and plan revision actions improve policy consistency.
 
-##  Environment Design
+## Action Space
 
-### Action Space
+Legacy cleaning actions remain supported and now act as tool primitives:
+- `remove_duplicates`, `fill_missing`, `standardize_format`, `fix_outliers`, `convert_type`, `correct_typos`, `rename_column`, `drop_column`, `submit`
 
-The agent can perform **9 types of cleaning actions**:
+New strategic actions:
+- `inspect_table`
+- `query_stakeholder`
+- `delegate_task`
+- `run_validation_suite`
+- `propose_plan`
+- `negotiate_tradeoff`
+- `update_memory`
 
-| Action | Description | Parameters |
-|--------|-------------|------------|
-| `remove_duplicates` | Remove duplicate rows | `column` (optional subset) |
-| `fill_missing` | Handle missing values | `column`, `strategy` (drop/fill_value/mean/mode), `fill_value` |
-| `standardize_format` | Standardize data formats | `column`, `format` (iso_date/phone_standard/lowercase/titlecase/strip_whitespace) |
-| `fix_outliers` | Handle statistical outliers | `column`, `strategy` (clip/remove), `lower_bound`, `upper_bound` |
-| `rename_column` | Rename a column | `column`, `new_name` |
-| `drop_column` | Drop irrelevant column | `column` |
-| `correct_typos` | Fix categorical inconsistencies | `column`, `mapping` (oldnew dict) |
-| `convert_type` | Convert column data type | `column`, `target_type` (float/int/str), `strip_chars` |
-| `submit` | Submit for final grading |  |
+## Reward Design
 
-### Observation Space
+Dense shaping + terminal objective:
 
-Each observation contains:
-- **Dataset summary**: row count, column count, column names, types
-- **Quality metrics**: missing value counts per column, duplicate count
-- **Column stats**: mean, std, min, max for numeric columns
-- **Sample data**: first 5 rows as key-value dictionaries
-- **Detected issues**: auto-detected data quality problems
-- **Action feedback**: success/failure and message from last action
-- **Task context**: task ID, description, step count, quality score
+- **Step reward:** mission score delta minus step cost.
+- **Submit reward:** final mission score, with penalties for unresolved critical incidents.
+- **Timeout:** auto-submit with reduction.
 
-### Reward Function
+Mission score composition:
+- data integrity (35%)
+- stakeholder alignment (20%)
+- compliance safety (20%)
+- execution confidence (15%)
+- efficiency (10%)
 
-The reward function provides **continuous partial-progress signals**:
+Adjustments:
+- bonus for coherent planning and risk discovery
+- penalty for hidden unresolved risk pressure
 
-1. **Step reward** = ` quality_score - 0.005` (improvement minus small time penalty)
-2. **Submit reward** = `final_quality_score` (0.01.0)
-3. **Timeout penalty** = `quality_score  0.8` (20% penalty for exhausting steps)
+## Observation Design
 
-Quality score is a **weighted multi-dimensional metric** computed across:
-- Row count accuracy (no lost or extra rows)
-- Missing value reduction
-- Duplicate elimination
-- Data type correctness
-- Format consistency
-- Outlier handling
-- Schema correctness
-- Irrelevant column removal
+Every step returns:
+- visible incidents and severity mix
+- hidden-risk hints
+- stakeholder state (`trust`, `workload`, discovered priorities)
+- table health vectors (`completeness`, `consistency`, `timeliness`, `drift`)
+- mission score breakdown for explainability
+- narrative event log for demo storytelling
+- memory bank for long-horizon policy state
 
----
+## Tasks
 
-##  Tasks
+- `task_easy`: Retail promo data triage
+- `task_medium`: Healthcare claims reliability sprint
+- `task_hard`: Global supply chain data crisis
 
-### Task 1: Basic Data Cleaning (Easy)
-- **Dataset**: 30 employee records + 5 duplicates = 35 rows
-- **Issues**: Duplicate rows, missing emails/salaries/departments, salary as string
-- **Max steps**: 15
-- **Expected score for good agent**: 0.851.0
+Each task changes stakeholder graph, hidden incidents, and step budget.
 
-### Task 2: Format Standardization (Medium)
-- **Dataset**: 40 customer records + 4 duplicates = 44 rows
-- **Issues**: Mixed date formats, inconsistent phone formats, state abbreviation vs full name, category typos, duplicates, missing values
-- **Max steps**: 25
-- **Expected score for good agent**: 0.700.90
-
-### Task 3: Complex Multi-Issue Cleaning (Hard)
-- **Dataset**: 60 sales transactions + 6 duplicates + 3 irrelevant columns = 66 rows, 12 columns
-- **Issues**: Revenue outliers, negative quantities, future dates, mixed date formats, encoding issues, status typos, irrelevant columns, revenue as "$X.XX" strings, duplicates, missing values, schema inconsistency (unit_price  unit_cost)
-- **Max steps**: 35
-- **Expected score for good agent**: 0.500.80
-
----
-
-##  Setup & Usage
-
-### Prerequisites
-- Python 3.10+
-- Docker (for containerized deployment)
-
-### Local Development
+## Quickstart
 
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd data-cleaning-env
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or: .\venv\Scripts\activate  # Windows
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Start the server
 python server/app.py
 ```
 
-### Docker
-
 ```bash
-# Build the image
-docker build -t data-cleaning-env .
-
-# Run the container
-docker run -d -p 7860:7860 data-cleaning-env
+curl -X POST http://localhost:7860/reset -H "Content-Type: application/json" -d "{\"task_id\":\"task_hard\",\"seed\":42}"
+curl -X POST http://localhost:7860/step -H "Content-Type: application/json" -d "{\"action\":{\"action_type\":\"propose_plan\",\"column\":null,\"params\":{\"milestones\":[\"triage\",\"stabilize\",\"optimize\",\"release\"]}}}"
 ```
 
-### Test the endpoints
+## Baseline Inference
 
+Heuristic policy (default):
 ```bash
-# Health check
-curl http://localhost:7860/health
-
-# Reset environment (easy task)
-curl -X POST http://localhost:7860/reset \
-  -H "Content-Type: application/json" \
-  -d '{"seed": 42, "task_id": "task_easy"}'
-
-# Execute a cleaning action
-curl -X POST http://localhost:7860/step \
-  -H "Content-Type: application/json" \
-  -d '{"action": {"action_type": "remove_duplicates", "column": null, "params": {}}}'
-
-# Get current state
-curl http://localhost:7860/state
-```
-
-### Run the Baseline Inference
-
-```bash
-# Set environment variables
-export API_BASE_URL="https://api.openai.com/v1"
-export MODEL_NAME="gpt-4o-mini"
-export OPENAI_API_KEY="your-key-here"
-export ENV_URL="http://localhost:7860"
-
-# Run inference
+set POLICY_MODE=heuristic
+set ENV_URL=http://localhost:7860
 python inference.py
 ```
 
----
-
-##  Baseline Scores
-
-| Task | GPT-4o-mini Score | Steps Used |
-|------|------------------|------------|
-| task_easy | ~0.85 | 58 |
-| task_medium | ~0.65 | 1015 |
-| task_hard | ~0.45 | 1525 |
-
-*Scores are deterministic with seed=42. Better models and strategies can significantly improve these scores.*
-
----
-
-##  Project Structure
-
-```
-data-cleaning-env/
- openenv.yaml          # OpenEnv manifest
- models.py             # Typed Action/Observation/State models
- server/
-    app.py            # FastAPI server with OpenEnv routes
-    environment.py    # Core environment logic + graders
- inference.py          # Baseline inference script
- Dockerfile            # Container definition
- requirements.txt      # Python dependencies
- pyproject.toml        # Package metadata
- README.md             # This file
+LLM policy:
+```bash
+set POLICY_MODE=llm
+set API_BASE_URL=https://api.openai.com/v1
+set MODEL_NAME=gpt-4o-mini
+set OPENAI_API_KEY=your_key
+python inference.py
 ```
 
----
+## Training / Evaluation / Plotting
 
-##  Environment Variables
+```bash
+python training/run_curriculum.py
+python evaluation/evaluate_policies.py
+python utils/plot_rewards.py --csv artifacts/evaluation_results.csv --out artifacts/reward_comparison.png
+```
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 7860 | Server port |
-| `HOST` | 0.0.0.0 | Bind address |
-| `API_BASE_URL` | https://api.openai.com/v1 | LLM API endpoint |
-| `MODEL_NAME` | gpt-4o-mini | Model identifier |
-| `HF_TOKEN` |  | API key |
-| `OPENAI_API_KEY` |  | Alternative API key |
-| `ENV_URL` | http://localhost:7860 | Environment server URL |
+Outputs:
+- `artifacts/trajectories.jsonl`
+- `artifacts/reward_traces.json`
+- `artifacts/episode_summaries.json`
+- `artifacts/evaluation_results.csv`
+- `artifacts/reward_comparison.png`
 
----
+## HF Space Hosting Plan
 
-##  License
+- Keep `openenv.yaml` entry point as `server.app:app`
+- Build via provided `Dockerfile`
+- Run validator script before submission
+- Include `docs/blog_video_outline.md` and `demo/demo_trajectories.json` in submission assets
+
+## Repository Layout
+
+- `server/environment_v2.py` - collaborative long-horizon environment
+- `server/app.py` - OpenEnv HTTP server
+- `models.py` - typed models with mission-centric fields
+- `inference.py` - heuristic or LLM policy runner
+- `training/run_curriculum.py` - trajectory generation
+- `evaluation/evaluate_policies.py` - benchmark script
+- `utils/plot_rewards.py` - visual evidence plotter
+- `demo/demo_trajectories.json` - demo story trajectories
+- `docs/blog_video_outline.md` - presentation structure
+- `docs/submission_checklist.md` - final verification
+
+## License
 
 BSD 3-Clause License

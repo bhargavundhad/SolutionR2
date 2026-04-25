@@ -1,0 +1,31 @@
+{
+  "hero_trajectory": {
+    "title": "Stakeholder-first strategy (high score)",
+    "actions": [
+      {"step": 1, "action_type": "propose_plan", "params": {"milestones": ["triage", "stabilize", "optimize", "release"]}},
+      {"step": 2, "action_type": "query_stakeholder", "params": {"stakeholder": "compliance_officer"}},
+      {"step": 3, "action_type": "run_validation_suite", "params": {"suite": "compliance"}},
+      {"step": 4, "action_type": "delegate_task", "params": {"stakeholder": "data_engineer", "objective": "incident_fix"}},
+      {"step": 5, "action_type": "remove_duplicates", "params": {}},
+      {"step": 6, "action_type": "inspect_table", "column": "shipments", "params": {}},
+      {"step": 7, "action_type": "negotiate_tradeoff", "params": {"stakeholder": "ops_lead", "concession": "status_update"}},
+      {"step": 8, "action_type": "submit", "params": {}}
+    ],
+    "expected_outcome": {
+      "quality_score_range": [0.78, 0.92],
+      "story": "Agent discovers hidden compliance risk, aligns team priorities, and resolves critical incidents before release."
+    }
+  },
+  "anti_pattern_trajectory": {
+    "title": "Premature submit (low score)",
+    "actions": [
+      {"step": 1, "action_type": "remove_duplicates", "params": {}},
+      {"step": 2, "action_type": "fill_missing", "params": {"strategy": "mode"}},
+      {"step": 3, "action_type": "submit", "params": {}}
+    ],
+    "expected_outcome": {
+      "quality_score_range": [0.22, 0.46],
+      "story": "Agent ignores hidden incidents and stakeholder alignment, causing large final penalty."
+    }
+  }
+}

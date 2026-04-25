@@ -97,6 +97,35 @@ class DataCleaningObservation(Observation):
     task_description: str = Field(default="", description="Description of the cleaning task")
     max_steps: int = Field(default=20, description="Maximum steps allowed")
     current_step: int = Field(default=0, description="Current step number")
+    mission_phase: str = Field(default="triage", description="Current mission phase")
+    visible_incidents: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Incidents currently visible to the agent (partial observability)",
+    )
+    hidden_risks_hint: List[str] = Field(
+        default_factory=list,
+        description="Coarse hints about undiscovered risks",
+    )
+    stakeholder_status: Dict[str, Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Visible stakeholder trust, workload, and known priorities",
+    )
+    table_health: Dict[str, Dict[str, float]] = Field(
+        default_factory=dict,
+        description="Per-table health metrics (completeness, consistency, timeliness, drift)",
+    )
+    memory_bank: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Agent-written working memory for long-horizon planning",
+    )
+    mission_score_breakdown: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Decomposed scoring dimensions for shaping and explainability",
+    )
+    narrative_event_log: List[str] = Field(
+        default_factory=list,
+        description="Recent mission events for demo storytelling",
+    )
 
 
 # =============================================================================
@@ -112,3 +141,16 @@ class DataCleaningState(State):
     is_done: bool = Field(default=False, description="Whether the episode is finished")
     current_score: float = Field(default=0.0, description="Current quality score (0.0-1.0)")
     actions_taken: List[str] = Field(default_factory=list, description="History of actions taken")
+    mission_phase: str = Field(default="triage", description="Current mission phase")
+    unresolved_critical_incidents: int = Field(
+        default=0,
+        description="Count of unresolved critical incidents",
+    )
+    stakeholder_alignment: float = Field(
+        default=0.0,
+        description="Aggregated alignment/trust across stakeholders",
+    )
+    compliance_risk: float = Field(
+        default=1.0,
+        description="Estimated compliance risk (lower is better)",
+    )

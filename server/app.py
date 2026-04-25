@@ -19,10 +19,10 @@ from typing import Any, Dict, Optional
 from openenv.core.env_server.http_server import HTTPEnvServer
 from openenv.core.env_server.types import HealthResponse, HealthStatus
 
-from environment import DataCleaningEnvironment
+from environment_v2 import CollaborativeDataOpsEnvironment
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import DataCleaningAction, DataCleaningObservation
+from models import DataCleaningAction, DataCleaningObservation, DataCleaningState
 
 # Create FastAPI app
 app = FastAPI(
@@ -42,7 +42,7 @@ app = FastAPI(
 # =============================================================================
 
 # Single shared environment instance for stateful HTTP interaction
-_env_instance = DataCleaningEnvironment()
+_env_instance = CollaborativeDataOpsEnvironment()
 
 
 class ResetRequest(BaseModel):
@@ -82,7 +82,7 @@ async def health():
 async def reset(request: ResetRequest = Body(default_factory=ResetRequest)):
     """Reset the environment with a specific task."""
     global _env_instance
-    _env_instance = DataCleaningEnvironment()
+    _env_instance = CollaborativeDataOpsEnvironment()
     
     obs = _env_instance.reset(
         seed=request.seed,
@@ -118,7 +118,7 @@ async def schema():
     return {
         "action": DataCleaningAction.model_json_schema(),
         "observation": DataCleaningObservation.model_json_schema(),
-        "state": DataCleaningObservation.model_json_schema(),
+        "state": DataCleaningState.model_json_schema(),
     }
 
 
@@ -126,8 +126,8 @@ async def schema():
 async def metadata():
     """Get environment metadata."""
     return {
-        "name": "DataCleaningEnvironment",
-        "description": "An environment for training AI agents on real-world data cleaning tasks",
+        "name": "CollaborativeDataOpsEnvironment",
+        "description": "A multi-agent, long-horizon DataOps crisis environment with partial observability",
         "version": "1.0.0",
         "tasks": ["task_easy", "task_medium", "task_hard"],
     }
