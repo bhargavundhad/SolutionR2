@@ -8,16 +8,21 @@ venv/
 env/
 .env
 
-# Hackathon / Debugging files we generated (NOT needed for submission)
-*.txt
+# Lock files (large, regenerated from pyproject.toml)
+uv.lock
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# Hackathon debug artifacts (NOT needed for submission)
 *.log
 *_src.py
 test_*.py
 core_info*
 server_info*
 pkg_info*
-
-# Only keep necessary code files
-!Pre Validation Script.txt
-!Sample Inference Script.txt
-!requirements.txt

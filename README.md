@@ -139,16 +139,19 @@ Outputs:
 
 ## Repository Layout
 
-- `server/environment_v2.py` - collaborative long-horizon environment
-- `server/app.py` - OpenEnv HTTP server
-- `models.py` - typed models with mission-centric fields
-- `inference.py` - heuristic or LLM policy runner
-- `training/run_curriculum.py` - trajectory generation
-- `evaluation/evaluate_policies.py` - benchmark script
-- `utils/plot_rewards.py` - visual evidence plotter
-- `demo/demo_trajectories.json` - demo story trajectories
-- `docs/blog_video_outline.md` - presentation structure
-- `docs/submission_checklist.md` - final verification
+- `server/environment_v2.py` — collaborative long-horizon environment
+- `server/app.py` — OpenEnv HTTP server
+- `models.py` — typed models with mission-centric fields
+- `inference.py` — heuristic or LLM policy runner
+- `hackathon_benchmark.py` — full 3-policy benchmark (random / heuristic / trained)
+- `training/run_curriculum.py` — trajectory generation
+- `evaluation/evaluate_policies.py` — policy comparison script
+- `utils/plot_rewards.py` — visual evidence plotter
+- `demo/demo_trajectories.json` — demo story trajectories
+- `docs/architecture_summary.md` — system architecture diagrams
+- `docs/judge_presentation.md` — benchmark results & competitive analysis
+- `docs/submission_checklist.md` — final verification checklist
+- `docs/blog_video_outline.md` — presentation structure
 
 ## License
 
