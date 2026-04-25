@@ -9,9 +9,13 @@ Generates quantitative evidence for reward improvement:
 import csv
 import os
 import random
+import sys
 from typing import Dict, List
 
 import requests
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from ..inference import choose_heuristic_action
