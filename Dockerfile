@@ -14,7 +14,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 COPY pyproject.toml ./
 
 # Install dependencies using uv
-RUN uv sync --frozen --no-cache --no-dev
+RUN uv sync --no-cache --no-dev
 
 # Copy application code
 COPY . .
