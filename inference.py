@@ -40,7 +40,7 @@ if not ENV_URL:
         ENV_URL = f"https://{host}.hf.space"
     else:
         # Final fallback
-        ENV_URL = "https://hinex-07-data-cleaning-env.hf.space"
+        ENV_URL = "https://bhargav1312-openenv-dataops-crisis-env.hf.space"
 
 # Initialize OpenAI client
 client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)

@@ -17,12 +17,12 @@
 #     ./validate-submission.sh <ping_url> [repo_dir]
 #
 # Arguments:
-#   ping_url   Your HuggingFace Space URL (e.g. https://your-space.hf.space)
+#   ping_url   Your HuggingFace Space URL (e.g. https://bhargav1312-openenv-dataops-crisis-env.hf.space)
 #   repo_dir   Path to your repo (default: current directory)
 #
 # Examples:
-#   ./validate-submission.sh https://my-team.hf.space
-#   ./validate-submission.sh https://my-team.hf.space ./my-repo
+#   ./validate-submission.sh https://bhargav1312-openenv-dataops-crisis-env.hf.space
+#   ./validate-submission.sh https://bhargav1312-openenv-dataops-crisis-env.hf.space ./my-repo
 #
 
 set -uo pipefail
