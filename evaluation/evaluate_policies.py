@@ -13,7 +13,11 @@ from typing import Dict, List
 
 import requests
 
-from ..inference import choose_heuristic_action
+try:
+    from ..inference import choose_heuristic_action
+except ImportError:
+    # When run as a script, use absolute import
+    from inference import choose_heuristic_action
 
 
 ENV_URL = os.environ.get("ENV_URL", "http://localhost:7860")
